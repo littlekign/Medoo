@@ -650,14 +650,43 @@ class WhereTest extends MedooTestCase
             ]
         ]);
 
-        $this->assertQuery(
-            <<<EOD
-            SELECT "user_name"
-            FROM "account"
-            ORDER BY FIELD("user_id", 43,12,57,98,144,1),"register_date","profile_id" DESC,"date" ASC
-            EOD,
-            $this->database->queryString
-        );
+        $this->assertQuery([
+            'default' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                ORDER BY CASE "user_id" WHEN 43 THEN 1 WHEN 12 THEN 2 WHEN 57 THEN 3 WHEN 98 THEN 4 WHEN 144 THEN 5 WHEN 1 THEN 6 ELSE 0 END,"register_date","profile_id" DESC,"date" ASC
+                EOD,
+            'mysql' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                ORDER BY FIELD("user_id", 43,12,57,98,144,1),"register_date","profile_id" DESC,"date" ASC
+                EOD
+        ], $this->database->queryString);
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProviderExternal(MedooTestCase::class, 'typesProvider')]
+    public function testMultipleOrderWhereWithStringValues($type)
+    {
+        $this->setType($type);
+
+        $this->database->select("account", "user_name", [
+            "ORDER" => [
+                "status" => ["active", "pending", "disabled"]
+            ]
+        ]);
+
+        $this->assertQuery([
+            'default' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                ORDER BY CASE "status" WHEN 'active' THEN 1 WHEN 'pending' THEN 2 WHEN 'disabled' THEN 3 ELSE 0 END
+                EOD,
+            'mysql' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                ORDER BY FIELD("status", 'active','pending','disabled')
+                EOD
+        ], $this->database->queryString);
     }
 
     #[\PHPUnit\Framework\Attributes\DataProviderExternal(MedooTestCase::class, 'typesProvider')]

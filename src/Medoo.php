@@ -1211,19 +1211,25 @@ class Medoo
                     foreach ($order as $column => $value) {
                         if (is_array($value)) {
                             $valueStack = [];
+                            $isOrderField = $this->type === 'mysql';
 
-                            foreach ($value as $item) {
-                                if (is_int($item)) {
-                                    $valueStack[] = $item;
+                            foreach ($value as $index => $item) {
+                                if ($raw = $this->buildRaw($item, $map)) {
+                                    $fieldValue = $raw;
                                 } else {
                                     $fieldKey = $this->mapKey();
-                                    $valueStack[] = $fieldKey;
-                                    $map[$fieldKey] = [$item, PDO::PARAM_STR];
+                                    $fieldValue = $fieldKey;
+                                    $map[$fieldKey] = $this->typeMap($item, gettype($item));
                                 }
+
+                                $valueStack[] = $isOrderField ?
+                                    $fieldValue :
+                                    "WHEN {$fieldValue} THEN " . ($index + 1);
                             }
 
-                            $valueString = implode(',', $valueStack);
-                            $stack[] = "FIELD({$this->columnQuote($column)}, {$valueString})";
+                            $stack[] = $isOrderField ?
+                                "FIELD({$this->columnQuote($column)}, " . implode(',', $valueStack) . ')' :
+                                "CASE {$this->columnQuote($column)} " . implode(' ', $valueStack) . ' ELSE 0 END';
                         } elseif ($value === 'ASC' || $value === 'DESC') {
                             $stack[] = $this->columnQuote($column) . ' ' . $value;
                         } elseif (is_int($column)) {
