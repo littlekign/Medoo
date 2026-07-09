@@ -44,20 +44,6 @@ class Raw
 /**
  * Core Medoo database class.
  *
- * @method array select(string $table, array $columns)
- * @method mixed select(string $table, string $column)
- * @method array select(string $table, array $columns, array $where)
- * @method mixed select(string $table, string $column, array $where)
- * @method array select(string $table, array $join, array $columns)
- * @method mixed select(string $table, array $join, string $column)
- * @method array select(string $table, array $join, array $columns, array $where)
- * @method mixed select(string $table, array $join, string $column, array $where)
- * @method null select(string $table, array $columns, callable $callback)
- * @method null select(string $table, string $column, callable $callback)
- * @method null select(string $table, array $columns, array $where, callable $callback)
- * @method null select(string $table, string $column, array $where, callable $callback)
- * @method null select(string $table, array $join, array $columns, array $where, callable $callback)
- * @method null select(string $table, array $join, string $column, array $where, callable $callback)
  * @method mixed get(string $table, array|string|null $join = null, array|string|null $columns = null, array|null $where = null)
  * @method bool has(string $table, array $join, array|null $where = null)
  * @method array rand(string $table, array|string|null $join = null, array|string|null $columns = null, array|null $where = null)
@@ -1713,6 +1699,7 @@ class Medoo
      * @param array|string|callable|null $columns The selected columns, the WHERE clause, or a row callback depending on the call signature.
      * @param array|callable|null $where The WHERE clause, or a row callback depending on the call signature.
      * @return array|null
+     * @phpstan-return ($columns is callable ? null : ($where is callable ? null : array))
      */
     public function select(string $table, $join, $columns = null, $where = null): ?array
     {
