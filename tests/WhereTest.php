@@ -710,14 +710,61 @@ class WhereTest extends MedooTestCase
             'user_name[REGEXP]' => '[a-z0-9]*'
         ]);
 
-        $this->assertQuery(
-            <<<EOD
-            SELECT "user_name"
-            FROM "account"
-            WHERE "user_name" REGEXP '[a-z0-9]*'
-            EOD,
-            $this->database->queryString
-        );
+        $this->assertQuery([
+            'default' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE "user_name" REGEXP '[a-z0-9]*'
+                EOD,
+            'pgsql' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE "user_name" ~ '[a-z0-9]*'
+                EOD,
+            'oracle' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE REGEXP_LIKE("user_name", '[a-z0-9]*')
+                EOD,
+            'mssql' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE REGEXP_LIKE("user_name", '[a-z0-9]*')
+                EOD
+        ], $this->database->queryString);
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProviderExternal(MedooTestCase::class, 'typesProvider')]
+    public function testNegativeRegularExpressionWhere($type)
+    {
+        $this->setType($type);
+
+        $this->database->select("account", "user_name", [
+            'user_name[!REGEXP]' => '[a-z0-9]*'
+        ]);
+
+        $this->assertQuery([
+            'default' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE "user_name" NOT REGEXP '[a-z0-9]*'
+                EOD,
+            'pgsql' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE "user_name" !~ '[a-z0-9]*'
+                EOD,
+            'oracle' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE NOT REGEXP_LIKE("user_name", '[a-z0-9]*')
+                EOD,
+            'mssql' => <<<EOD
+                SELECT "user_name"
+                FROM "account"
+                WHERE NOT REGEXP_LIKE("user_name", '[a-z0-9]*')
+                EOD
+        ], $this->database->queryString);
     }
 
     #[\PHPUnit\Framework\Attributes\DataProviderExternal(MedooTestCase::class, 'typesProvider')]

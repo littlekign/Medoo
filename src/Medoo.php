@@ -1064,9 +1064,23 @@ class Medoo
                             $map[$mapKey . 'b'] = [$value[1], $dataType];
                         }
                     }
-                } elseif ($operator === 'REGEXP') {
-                    $stack[] = "{$column} REGEXP {$mapKey}";
+                } elseif ($operator === 'REGEXP' || $operator === '!REGEXP') {
+                    $isNegative = $operator === '!REGEXP';
                     $map[$mapKey] = [$value, PDO::PARAM_STR];
+
+                    switch ($this->type) {
+                        case 'pgsql':
+                            $stack[] = "{$column} " . ($isNegative ? '!~' : '~') . " {$mapKey}";
+                            break;
+
+                        case 'oracle':
+                        case 'mssql':
+                            $stack[] = ($isNegative ? 'NOT ' : '') . "REGEXP_LIKE({$column}, {$mapKey})";
+                            break;
+
+                        default:
+                            $stack[] = "{$column} " . ($isNegative ? 'NOT ' : '') . "REGEXP {$mapKey}";
+                    }
                 } else {
                     throw new InvalidArgumentException("Invalid operator [{$operator}] for column {$column} supplied.");
                 }
