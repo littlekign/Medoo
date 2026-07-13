@@ -618,13 +618,7 @@ class Medoo
             return null;
         }
 
-        if ($this->logging) {
-            $this->logs[] = [$statement, $map];
-        } else {
-            $this->logs = [[$statement, $map]];
-        }
-
-        $statement = $this->pdo->prepare($statement);
+        $pdoStatement = $this->pdo->prepare($statement);
         $errorInfo = $this->pdo->errorInfo();
 
         if ($errorInfo[0] !== '00000') {
@@ -635,19 +629,29 @@ class Medoo
         }
 
         foreach ($map as $key => $value) {
-            $statement->bindValue($key, $value[0], $value[1]);
+            $pdoStatement->bindValue($key, $value[0], $value[1]);
         }
+
+        $start = hrtime(true);
 
         if (is_callable($callback)) {
             $this->pdo->beginTransaction();
-            $callback($statement);
-            $execute = $statement->execute();
+            $callback($pdoStatement);
+            $execute = $pdoStatement->execute();
             $this->pdo->commit();
         } else {
-            $execute = $statement->execute();
+            $execute = $pdoStatement->execute();
         }
 
-        $errorInfo = $statement->errorInfo();
+        $log = [$statement, $map, (hrtime(true) - $start) / 1e9];
+
+        if ($this->logging) {
+            $this->logs[] = $log;
+        } else {
+            $this->logs = [$log];
+        }
+
+        $errorInfo = $pdoStatement->errorInfo();
 
         if ($errorInfo[0] !== '00000') {
             $this->errorInfo = $errorInfo;
@@ -657,10 +661,10 @@ class Medoo
         }
 
         if ($execute) {
-            $this->statement = $statement;
+            $this->statement = $pdoStatement;
         }
 
-        return $statement;
+        return $pdoStatement;
     }
 
     /**
@@ -2371,13 +2375,16 @@ class Medoo
      * Return all executed SQL statements with bound values interpolated.
      *
      * @codeCoverageIgnore
-     * @return string[]
+     * @return array
      */
     public function log(): array
     {
         return array_map(
             function ($log) {
-                return $this->generate($log[0], $log[1]);
+                return [
+                    $this->generate($log[0], $log[1]),
+                    sprintf('%.6fs', $log[2])
+                ];
             },
             $this->logs
         );
